@@ -1,0 +1,1299 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TOEIC500">
+<meta name="mobile-web-app-capable" content="yes">
+<title>TOEIC 500 ドリル</title>
+<style>
+  :root {
+    --paper: #FAF8F3;
+    --paper-dim: #F1ECE1;
+    --ink: #1C3D5A;
+    --ink-soft: #345878;
+    --text: #3A3631;
+    --text-faint: #8B8478;
+    --correct: #2D6A4F;
+    --correct-bg: #E3F0E9;
+    --wrong: #C4452C;
+    --wrong-bg: #FBEAE5;
+    --line: #DCD5C5;
+    --gold: #B8893E;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--paper);
+    color: var(--text);
+    font-family: -apple-system, "Hiragino Sans", "Yu Gothic", sans-serif;
+    height: 100%;
+    overscroll-behavior-y: none;
+  }
+
+  body {
+    background-image:
+      repeating-linear-gradient(transparent, transparent 39px, var(--line) 39px, var(--line) 40px);
+    background-attachment: local;
+  }
+
+  .app {
+    max-width: 480px;
+    margin: 0 auto;
+    min-height: 100vh;
+    padding: env(safe-area-inset-top) 0 calc(env(safe-area-inset-bottom) + 16px) 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ---------- HEADER ---------- */
+  header {
+    padding: 18px 20px 14px;
+    background: var(--paper);
+    border-bottom: 1px solid var(--line);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
+  .brand {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+  }
+
+  .brand h1 {
+    font-family: Georgia, "Hiragino Mincho ProN", serif;
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    margin: 0;
+    color: var(--ink);
+  }
+
+  .brand .target {
+    font-size: 12px;
+    color: var(--text-faint);
+    font-weight: 600;
+  }
+
+  /* progress gauge toward 500 */
+  .gauge-wrap {
+    margin-top: 12px;
+  }
+  .gauge-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--text-faint);
+    margin-bottom: 4px;
+    font-weight: 600;
+  }
+  .gauge-label span.num { color: var(--ink); font-weight: 700; }
+  .gauge-track {
+    height: 10px;
+    background: var(--paper-dim);
+    border-radius: 6px;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    position: relative;
+  }
+  .gauge-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--ink-soft), var(--ink));
+    border-radius: 6px 0 0 6px;
+    transition: width 0.6s cubic-bezier(.4,0,.2,1);
+  }
+
+  /* ---------- NAV ---------- */
+  nav.tabs {
+    display: flex;
+    gap: 8px;
+    padding: 14px 20px 0;
+    background: var(--paper);
+  }
+  .tab-btn {
+    flex: 1;
+    border: 1px solid var(--line);
+    background: var(--paper);
+    color: var(--text-faint);
+    font-size: 13px;
+    font-weight: 700;
+    padding: 10px 4px;
+    border-radius: 10px 10px 0 0;
+    border-bottom: none;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.2s;
+  }
+  .tab-btn.active {
+    background: var(--ink);
+    color: var(--paper);
+    border-color: var(--ink);
+  }
+
+  main {
+    flex: 1;
+    padding: 18px 20px 30px;
+  }
+
+  /* ---------- HOME SCREEN ---------- */
+  .home-card {
+    background: white;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 20px;
+    margin-bottom: 14px;
+    box-shadow: 0 1px 0 var(--line);
+  }
+  .home-card h2 {
+    font-family: Georgia, "Hiragino Mincho ProN", serif;
+    font-size: 16px;
+    margin: 0 0 4px;
+    color: var(--ink);
+  }
+  .home-card p {
+    font-size: 13px;
+    color: var(--text-faint);
+    margin: 0 0 14px;
+    line-height: 1.5;
+  }
+  .stat-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .stat-box {
+    flex: 1;
+    background: var(--paper-dim);
+    border-radius: 10px;
+    padding: 10px;
+    text-align: center;
+  }
+  .stat-box .n {
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--ink);
+    font-family: Georgia, serif;
+  }
+  .stat-box .l {
+    font-size: 10px;
+    color: var(--text-faint);
+    margin-top: 2px;
+    font-weight: 600;
+  }
+
+  .btn-primary {
+    display: block;
+    width: 100%;
+    background: var(--ink);
+    color: var(--paper);
+    border: none;
+    border-radius: 10px;
+    padding: 14px;
+    font-size: 15px;
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+    letter-spacing: 0.3px;
+  }
+  .btn-primary:active { transform: scale(0.98); }
+
+  .menu-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .menu-item {
+    background: white;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 16px 14px;
+    text-align: left;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .menu-item .icon { font-size: 22px; display: block; margin-bottom: 6px; }
+  .menu-item .name { font-size: 14px; font-weight: 700; color: var(--ink); display: block; }
+  .menu-item .sub { font-size: 11px; color: var(--text-faint); margin-top: 2px; display: block; }
+
+  /* ---------- QUIZ CARD ---------- */
+  .quiz-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+    font-size: 12px;
+    color: var(--text-faint);
+    font-weight: 700;
+  }
+  .quiz-meta .tag {
+    background: var(--paper-dim);
+    color: var(--ink);
+    padding: 3px 9px;
+    border-radius: 100px;
+    font-size: 11px;
+  }
+
+  .card {
+    background: white;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 26px 22px;
+    margin-bottom: 16px;
+    min-height: 140px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    box-shadow: 0 2px 0 var(--line);
+  }
+
+  .vocab-word {
+    font-family: Georgia, serif;
+    font-size: 30px;
+    font-weight: 700;
+    color: var(--ink);
+    text-align: center;
+    margin-bottom: 10px;
+  }
+  .vocab-meaning {
+    text-align: center;
+    font-size: 18px;
+    color: var(--text);
+    font-weight: 600;
+  }
+  .vocab-example {
+    text-align: center;
+    font-size: 13px;
+    color: var(--text-faint);
+    margin-top: 14px;
+    border-top: 1px dashed var(--line);
+    padding-top: 12px;
+    font-style: italic;
+    line-height: 1.5;
+  }
+
+  .grammar-sentence, .listening-prompt {
+    font-size: 17px;
+    line-height: 1.7;
+    color: var(--text);
+    text-align: center;
+    font-weight: 600;
+  }
+  .grammar-sentence .blank {
+    display: inline-block;
+    min-width: 60px;
+    border-bottom: 2px solid var(--ink);
+  }
+
+  .listening-play {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+  .play-btn {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background: var(--ink);
+    color: var(--paper);
+    border: none;
+    font-size: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+  .play-btn:active { transform: scale(0.96); }
+  .play-hint { font-size: 12px; color: var(--text-faint); font-weight: 600; }
+  .listening-question {
+    margin-top: 16px;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--ink);
+    text-align: center;
+  }
+
+  .choices {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .choice-btn {
+    background: white;
+    border: 1.5px solid var(--line);
+    border-radius: 10px;
+    padding: 14px 16px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    text-align: left;
+    cursor: pointer;
+    font-family: inherit;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .choice-btn .letter {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--paper-dim);
+    color: var(--text-faint);
+    font-size: 11px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .choice-btn:active { transform: scale(0.99); }
+  .choice-btn.correct {
+    background: var(--correct-bg);
+    border-color: var(--correct);
+    color: var(--correct);
+  }
+  .choice-btn.correct .letter { background: var(--correct); color: white; }
+  .choice-btn.wrong {
+    background: var(--wrong-bg);
+    border-color: var(--wrong);
+    color: var(--wrong);
+  }
+  .choice-btn.wrong .letter { background: var(--wrong); color: white; }
+  .choice-btn.disabled { pointer-events: none; }
+
+  .explanation {
+    margin-top: 14px;
+    background: var(--paper-dim);
+    border-radius: 10px;
+    padding: 14px;
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.6;
+  }
+  .explanation b { color: var(--ink); }
+
+  .next-btn {
+    margin-top: 16px;
+    width: 100%;
+    background: var(--ink);
+    color: var(--paper);
+    border: none;
+    border-radius: 10px;
+    padding: 14px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+  }
+
+  .vocab-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 6px;
+  }
+  .vocab-actions button {
+    flex: 1;
+    border: 1.5px solid var(--line);
+    background: white;
+    border-radius: 10px;
+    padding: 13px;
+    font-size: 13px;
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+  }
+  .vocab-actions .know { color: var(--correct); border-color: var(--correct); background: var(--correct-bg); }
+  .vocab-actions .dontknow { color: var(--wrong); border-color: var(--wrong); background: var(--wrong-bg); }
+
+  .quiz-prompt-label {
+    text-align: center;
+    font-size: 12px;
+    color: var(--text-faint);
+    font-weight: 700;
+    letter-spacing: 0.3px;
+  }
+
+  .review-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    background: var(--paper-dim);
+    border: 1.5px dashed var(--gold);
+    border-radius: 14px;
+    padding: 14px 16px;
+    margin-bottom: 14px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .review-card-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .review-icon { font-size: 24px; }
+  .review-title { font-size: 14px; font-weight: 700; color: var(--ink); text-align: left; }
+  .review-sub { font-size: 11px; color: var(--text-faint); text-align: left; margin-top: 2px; }
+  .review-count {
+    background: var(--gold);
+    color: white;
+    font-size: 13px;
+    font-weight: 800;
+    min-width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* ---------- RESULT STAMP ---------- */
+  .result-screen {
+    text-align: center;
+    padding: 30px 10px;
+  }
+  .stamp {
+    width: 130px;
+    height: 130px;
+    margin: 0 auto 18px;
+    border-radius: 50%;
+    border: 4px solid var(--ink);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    transform: rotate(-6deg);
+    animation: stampIn 0.4s cubic-bezier(.2,1.4,.4,1);
+  }
+  @keyframes stampIn {
+    0% { transform: rotate(-6deg) scale(0.4); opacity: 0; }
+    100% { transform: rotate(-6deg) scale(1); opacity: 1; }
+  }
+  .stamp .pct { font-size: 32px; font-weight: 800; color: var(--ink); font-family: Georgia, serif; }
+  .stamp .lbl { font-size: 11px; color: var(--ink); font-weight: 700; letter-spacing: 1px; }
+  .result-screen h2 {
+    font-family: Georgia, serif;
+    font-size: 20px;
+    color: var(--ink);
+    margin: 0 0 6px;
+  }
+  .result-screen p { color: var(--text-faint); font-size: 13px; margin-bottom: 24px; }
+
+  .empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-faint);
+  }
+
+  ::selection { background: var(--ink); color: white; }
+</style>
+</head>
+<body>
+<div class="app" id="app"></div>
+
+<script>
+// TOEIC 500点レベル学習データ
+const VOCAB_DATA = [
+  { word: "attend", meaning: "出席する", example: "Please attend the meeting on time.", level: "頻出" },
+  { word: "schedule", meaning: "予定、スケジュール", example: "The schedule has been changed.", level: "頻出" },
+  { word: "department", meaning: "部署", example: "She works in the sales department.", level: "頻出" },
+  { word: "invoice", meaning: "請求書", example: "Please send the invoice by email.", level: "頻出" },
+  { word: "candidate", meaning: "候補者", example: "We have three candidates for the position.", level: "頻出" },
+  { word: "warehouse", meaning: "倉庫", example: "The goods are stored in the warehouse.", level: "頻出" },
+  { word: "negotiate", meaning: "交渉する", example: "They negotiated a better price.", level: "頻出" },
+  { word: "renew", meaning: "更新する", example: "You need to renew your contract.", level: "頻出" },
+  { word: "estimate", meaning: "見積もる、見積もり", example: "Can you give me an estimate?", level: "頻出" },
+  { word: "supervisor", meaning: "上司、監督者", example: "Talk to your supervisor about it.", level: "頻出" },
+  { word: "available", meaning: "利用可能な", example: "The room is available tomorrow.", level: "頻出" },
+  { word: "request", meaning: "依頼する、依頼", example: "I have a request for you.", level: "頻出" },
+  { word: "applicant", meaning: "応募者", example: "Many applicants applied for the job.", level: "頻出" },
+  { word: "delay", meaning: "遅延、遅らせる", example: "The flight was delayed by two hours.", level: "頻出" },
+  { word: "remind", meaning: "気づかせる、思い出させる", example: "Please remind me to call him.", level: "頻出" },
+  { word: "expense", meaning: "経費", example: "Travel expenses will be reimbursed.", level: "頻出" },
+  { word: "deadline", meaning: "締め切り", example: "The deadline is next Friday.", level: "頻出" },
+  { word: "client", meaning: "顧客", example: "We have a meeting with a client.", level: "頻出" },
+  { word: "approve", meaning: "承認する", example: "The manager approved the plan.", level: "頻出" },
+  { word: "inventory", meaning: "在庫", example: "We need to check the inventory.", level: "頻出" },
+  { word: "qualified", meaning: "資格のある", example: "She is qualified for the job.", level: "標準" },
+  { word: "reception", meaning: "受付、歓迎会", example: "Please check in at the reception.", level: "標準" },
+  { word: "branch", meaning: "支店", example: "The company opened a new branch.", level: "標準" },
+  { word: "directly", meaning: "直接に", example: "You can contact me directly.", level: "標準" },
+  { word: "submit", meaning: "提出する", example: "Submit the report by Monday.", level: "標準" },
+  { word: "improve", meaning: "改善する", example: "We need to improve our service.", level: "標準" },
+  { word: "purchase", meaning: "購入する、購入", example: "I purchased a new laptop.", level: "標準" },
+  { word: "voucher", meaning: "クーポン券", example: "You can use this voucher for a discount.", level: "標準" },
+  { word: "facility", meaning: "施設", example: "The hotel has great facilities.", level: "標準" },
+  { word: "promotion", meaning: "昇進、宣伝", example: "He got a promotion last month.", level: "標準" }
+];
+
+const GRAMMAR_DATA = [
+  {
+    sentence: "She ___ to the office every day by bus.",
+    choices: ["go", "goes", "going", "gone"],
+    answer: 1,
+    explanation: "主語が3人称単数(She)で現在の習慣を表すので、動詞は goes (三単現のs)。"
+  },
+  {
+    sentence: "The report ___ by the manager yesterday.",
+    choices: ["wrote", "was written", "writes", "writing"],
+    answer: 1,
+    explanation: "「報告書が書かれた」という受け身(was written)が正解。yesterdayがあるので過去形の受動態。"
+  },
+  {
+    sentence: "I have ___ finished my homework.",
+    choices: ["already", "yet", "still", "ago"],
+    answer: 0,
+    explanation: "現在完了形でよく使うのは already(すでに)。「すでに終えた」という意味になる。"
+  },
+  {
+    sentence: "Please let me know ___ you need any help.",
+    choices: ["if", "because", "although", "during"],
+    answer: 0,
+    explanation: "「もし~なら教えてください」という条件を表すので if が正解。"
+  },
+  {
+    sentence: "This is the man ___ helped me yesterday.",
+    choices: ["which", "whose", "who", "whom"],
+    answer: 2,
+    explanation: "manという人を説明する主格の関係代名詞なので who が正解。"
+  },
+  {
+    sentence: "The meeting has been postponed ___ next Friday.",
+    choices: ["until", "since", "for", "by"],
+    answer: 0,
+    explanation: "「次の金曜日まで延期された」という意味でuntil(~まで)が正解。"
+  },
+  {
+    sentence: "Neither John ___ Mary attended the seminar.",
+    choices: ["and", "or", "nor", "but"],
+    answer: 2,
+    explanation: "neither A nor B「AもBも~ない」のセット表現。"
+  },
+  {
+    sentence: "The new policy will be effective ___ March 1st.",
+    choices: ["in", "on", "at", "to"],
+    answer: 1,
+    explanation: "特定の日付(March 1st)の前には on を使う。"
+  },
+  {
+    sentence: "We are looking forward ___ you soon.",
+    choices: ["to see", "seeing", "to seeing", "saw"],
+    answer: 2,
+    explanation: "look forward to ~ing「~するのを楽しみにする」の形なので to seeing が正解。"
+  },
+  {
+    sentence: "If I ___ more time, I would help you.",
+    choices: ["have", "had", "will have", "having"],
+    answer: 1,
+    explanation: "仮定法過去:If I had ~, I would ...「もし~があれば…するだろう」。"
+  },
+  {
+    sentence: "The data ___ analyzed carefully before the decision.",
+    choices: ["should be", "should", "should being", "should have"],
+    answer: 0,
+    explanation: "「分析されるべき」という受動態の助動詞表現で should be analyzed。"
+  },
+  {
+    sentence: "He is responsible ___ managing the budget.",
+    choices: ["of", "for", "to", "with"],
+    answer: 1,
+    explanation: "be responsible for ~「~の責任がある」という決まった形。"
+  },
+  {
+    sentence: "This product is much ___ than the previous one.",
+    choices: ["good", "well", "better", "best"],
+    answer: 2,
+    explanation: "muchは比較級を強調するので better(比較級)が正解。"
+  },
+  {
+    sentence: "Despite ___ hard, he failed the exam.",
+    choices: ["study", "studying", "studied", "to study"],
+    answer: 1,
+    explanation: "despite(~にもかかわらず)の後は動名詞(studying)が続く。"
+  },
+  {
+    sentence: "Each employee ___ given a new ID card.",
+    choices: ["are", "is", "were", "have been"],
+    answer: 1,
+    explanation: "Each + 単数名詞は単数扱いなので is が正解。"
+  }
+];
+
+const LISTENING_DATA = [
+  {
+    audio: "The meeting will start at three o'clock in conference room B.",
+    question: "What time will the meeting start?",
+    choices: ["At two o'clock", "At three o'clock", "At four o'clock", "At five o'clock"],
+    answer: 1
+  },
+  {
+    audio: "I'm sorry, but the flight to New York has been delayed by two hours.",
+    question: "What happened to the flight?",
+    choices: ["It was canceled", "It departed early", "It was delayed", "It changed gates"],
+    answer: 2
+  },
+  {
+    audio: "Could you please send me the invoice by the end of this week?",
+    question: "What does the speaker ask for?",
+    choices: ["A phone call", "A meeting", "An invoice", "A refund"],
+    answer: 2
+  },
+  {
+    audio: "The new employee will start working in the marketing department next Monday.",
+    question: "When will the new employee start?",
+    choices: ["This Monday", "Next Monday", "Next Friday", "Tomorrow"],
+    answer: 1
+  },
+  {
+    audio: "Our office will be closed for the holidays from December 25th to January 2nd.",
+    question: "Why will the office be closed?",
+    choices: ["For renovation", "For the holidays", "For a meeting", "For training"],
+    answer: 1
+  },
+  {
+    audio: "Please remember to submit your expense report before the deadline on Friday.",
+    question: "What should the listener do before Friday?",
+    choices: ["Attend a meeting", "Submit an expense report", "Call the client", "Book a flight"],
+    answer: 1
+  },
+  {
+    audio: "The price of the product will increase by ten percent starting next month.",
+    question: "What will happen next month?",
+    choices: ["The price will decrease", "The price will increase", "The product will be discontinued", "The product will be free"],
+    answer: 1
+  },
+  {
+    audio: "You can pick up your badge at the reception desk on the first floor.",
+    question: "Where can the listener get a badge?",
+    choices: ["Second floor reception", "First floor reception", "Conference room", "Parking lot"],
+    answer: 1
+  },
+  {
+    audio: "We need to hire two more engineers for the new project.",
+    question: "What does the company need to do?",
+    choices: ["Fire two engineers", "Hire two engineers", "Train two managers", "Promote two staff"],
+    answer: 1
+  },
+  {
+    audio: "The warehouse is located near the airport, about twenty minutes by car.",
+    question: "Where is the warehouse located?",
+    choices: ["Near the train station", "Near the airport", "In the city center", "Near the office"],
+    answer: 1
+  }
+];
+
+</script>
+<script>
+(function(){
+  "use strict";
+
+  // ---------- STATE ----------
+  const STORAGE_KEY = "toeic500_state_v1";
+  function loadState() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (!parsed.reviewList) parsed.reviewList = { vocab: [], grammar: [], listening: [] };
+        return parsed;
+      }
+    } catch(e) {}
+    return { totalAnswered: 0, totalCorrect: 0, knownWords: {}, streak: 0, lastStudyDate: null, sessionsDone: 0,
+      reviewList: { vocab: [], grammar: [], listening: [] } };
+  }
+  function saveState() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(e) {}
+  }
+  let state = loadState();
+
+  // ---------- REVIEW LIST HELPERS ----------
+  // vocab: store word string. grammar/listening: store the sentence/audio text as a unique key.
+  function addToReview(category, key) {
+    const list = state.reviewList[category];
+    if (!list.includes(key)) list.push(key);
+  }
+  function removeFromReview(category, key) {
+    state.reviewList[category] = state.reviewList[category].filter(k => k !== key);
+  }
+  function reviewCount() {
+    return state.reviewList.vocab.length + state.reviewList.grammar.length + state.reviewList.listening.length;
+  }
+  function getReviewItems() {
+    const vocabItems = VOCAB_DATA.filter(v => state.reviewList.vocab.includes(v.word));
+    const grammarItems = GRAMMAR_DATA.filter(g => state.reviewList.grammar.includes(g.sentence));
+    const listeningItems = LISTENING_DATA.filter(l => state.reviewList.listening.includes(l.audio));
+    return { vocabItems, grammarItems, listeningItems };
+  }
+
+  let mode = "home"; // home | vocab | grammar | listening | review | result
+  let queue = [];
+  let qIndex = 0;
+  let sessionCorrect = 0;
+  let sessionTotal = 0;
+  let answered = false;
+  let currentVocabQ = null;
+  let reviewQueue = []; // mixed: [{type:'vocab'|'grammar'|'listening', data:...}]
+
+  function shuffle(arr) {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  function todayStr() {
+    const d = new Date();
+    return d.getFullYear() + "-" + (d.getMonth()+1) + "-" + d.getDate();
+  }
+
+  function bumpStreak() {
+    const today = todayStr();
+    if (state.lastStudyDate === today) return;
+    const y = new Date(); y.setDate(y.getDate()-1);
+    const yStr = y.getFullYear() + "-" + (y.getMonth()+1) + "-" + y.getDate();
+    if (state.lastStudyDate === yStr) state.streak += 1;
+    else state.streak = 1;
+    state.lastStudyDate = today;
+    saveState();
+  }
+
+  // ---------- SPEECH ----------
+  let voices = [];
+  function loadVoices() { voices = window.speechSynthesis ? window.speechSynthesis.getVoices() : []; }
+  if (window.speechSynthesis) {
+    loadVoices();
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+  }
+  function speak(text) {
+    if (!window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = "en-US";
+    u.rate = 0.92;
+    const enVoice = voices.find(v => v.lang && v.lang.startsWith("en"));
+    if (enVoice) u.voice = enVoice;
+    window.speechSynthesis.speak(u);
+  }
+
+  // ---------- RENDER ----------
+  const root = document.getElementById("app");
+
+  function render() {
+    if (mode === "home") return renderHome();
+    if (mode === "vocab") return renderVocab();
+    if (mode === "grammar") return renderGrammar();
+    if (mode === "listening") return renderListening();
+    if (mode === "review") return renderReview();
+    if (mode === "result") return renderResult();
+  }
+
+  function header(activeTab) {
+    const progressPct = Math.min(100, Math.round((state.totalCorrect / 5) ) ); // illustrative scaling
+    const scoreEstimate = Math.min(500, 300 + state.totalCorrect * 4);
+    return `
+      <header>
+        <div class="brand">
+          <h1>TOEIC 500 ドリル</h1>
+          <div class="target">🔥 ${state.streak}日連続</div>
+        </div>
+        <div class="gauge-wrap">
+          <div class="gauge-label">
+            <span>目標スコア進捗</span>
+            <span><span class="num">${scoreEstimate}</span> / 500点</span>
+          </div>
+          <div class="gauge-track">
+            <div class="gauge-fill" style="width:${(scoreEstimate/500*100).toFixed(1)}%"></div>
+          </div>
+        </div>
+      </header>
+    `;
+  }
+
+  function renderHome() {
+    const totalQ = state.totalAnswered;
+    const acc = totalQ > 0 ? Math.round((state.totalCorrect/totalQ)*100) : 0;
+    const knownCount = Object.values(state.knownWords).filter(v => v).length;
+    const reviewN = reviewCount();
+
+    root.innerHTML = `
+      ${header()}
+      <main>
+        <div class="home-card">
+          <h2>毎日コツコツ、500点へ</h2>
+          <p>1回15〜30分。単語・文法・リスニングをバランスよく学習しましょう。</p>
+          <div class="stat-row">
+            <div class="stat-box"><div class="n">${totalQ}</div><div class="l">解答数</div></div>
+            <div class="stat-box"><div class="n">${acc}%</div><div class="l">正答率</div></div>
+            <div class="stat-box"><div class="n">${knownCount}</div><div class="l">覚えた単語</div></div>
+          </div>
+          <button class="btn-primary" id="quickStart">今日の学習をはじめる</button>
+        </div>
+
+        ${reviewN > 0 ? `
+        <button class="review-card" id="reviewBtn">
+          <div class="review-card-left">
+            <span class="review-icon">🔁</span>
+            <div>
+              <div class="review-title">間違えた問題を復習</div>
+              <div class="review-sub">苦手をまとめて解き直す</div>
+            </div>
+          </div>
+          <span class="review-count">${reviewN}</span>
+        </button>
+        ` : ""}
+
+        <div class="menu-grid">
+          <button class="menu-item" data-mode="vocab">
+            <span class="icon">📇</span>
+            <span class="name">単語クイズ</span>
+            <span class="sub">4択で語彙を暗記</span>
+          </button>
+          <button class="menu-item" data-mode="grammar">
+            <span class="icon">✏️</span>
+            <span class="name">文法問題</span>
+            <span class="sub">空欄補充</span>
+          </button>
+          <button class="menu-item" data-mode="listening" style="grid-column: span 2;">
+            <span class="icon">🎧</span>
+            <span class="name">リスニング問題</span>
+            <span class="sub">音声を聞いて選択（イヤホン推奨）</span>
+          </button>
+        </div>
+      </main>
+    `;
+
+    document.getElementById("quickStart").onclick = () => startSession("vocab");
+    document.querySelectorAll(".menu-item").forEach(el => {
+      el.onclick = () => startSession(el.dataset.mode);
+    });
+    const reviewBtn = document.getElementById("reviewBtn");
+    if (reviewBtn) reviewBtn.onclick = () => startReviewSession();
+  }
+
+  function startReviewSession() {
+    const { vocabItems, grammarItems, listeningItems } = getReviewItems();
+    reviewQueue = shuffle([
+      ...vocabItems.map(d => ({ type: "vocab", data: d })),
+      ...grammarItems.map(d => ({ type: "grammar", data: d })),
+      ...listeningItems.map(d => ({ type: "listening", data: d }))
+    ]);
+    if (reviewQueue.length === 0) { mode = "home"; return render(); }
+    mode = "review";
+    qIndex = 0;
+    sessionCorrect = 0;
+    sessionTotal = 0;
+    answered = false;
+    render();
+  }
+
+  function startSession(m) {
+    mode = m;
+    qIndex = 0;
+    sessionCorrect = 0;
+    sessionTotal = 0;
+    answered = false;
+    if (m === "vocab") {
+      // prioritize words marked as "not known yet" (knownWords[word] === false)
+      const weak = VOCAB_DATA.filter(v => state.knownWords[v.word] === false);
+      const rest = VOCAB_DATA.filter(v => state.knownWords[v.word] !== false);
+      const ordered = [...shuffle(weak), ...shuffle(rest)];
+      queue = ordered.slice(0, 10);
+    }
+    if (m === "grammar") queue = shuffle(GRAMMAR_DATA).slice(0, 8);
+    if (m === "listening") queue = shuffle(LISTENING_DATA).slice(0, 8);
+    render();
+  }
+
+  function tabs(active) {
+    const items = [["vocab","単語"],["grammar","文法"],["listening","リスニング"]];
+    return `<nav class="tabs">` + items.map(([k,l]) =>
+      `<button class="tab-btn ${active===k?'active':''}" data-go="${k}">${l}</button>`
+    ).join("") + `</nav>`;
+  }
+
+  function bindTabs() {
+    document.querySelectorAll(".tab-btn").forEach(el => {
+      el.onclick = () => startSession(el.dataset.go);
+    });
+  }
+
+  function progressLabel() {
+    return `<div class="quiz-meta"><span>問題 ${qIndex+1} / ${queue.length}</span><span class="tag">正解 ${sessionCorrect}/${sessionTotal}</span></div>`;
+  }
+
+  // ---------- VOCAB (4-choice quiz) ----------
+  function buildVocabQuestion(item) {
+    // randomly choose direction: word -> meaning, or meaning -> word
+    const direction = Math.random() < 0.5 ? "w2m" : "m2w";
+    const correctText = direction === "w2m" ? item.meaning : item.word;
+    const pool = VOCAB_DATA.filter(v => v.word !== item.word);
+    const distractors = shuffle(pool).slice(0, 3).map(v => direction === "w2m" ? v.meaning : v.word);
+    const choices = shuffle([correctText, ...distractors]);
+    const answerIndex = choices.indexOf(correctText);
+    return { item, direction, choices, answerIndex };
+  }
+
+  function renderVocab() {
+    if (qIndex >= queue.length) { mode = "result"; return render(); }
+    const item = queue[qIndex];
+    answered = false;
+    const q = buildVocabQuestion(item);
+    currentVocabQ = q;
+
+    const promptText = q.direction === "w2m" ? item.word : item.meaning;
+    const promptLabel = q.direction === "w2m" ? "この単語の意味は？" : "この意味を表す単語は？";
+    const promptClass = q.direction === "w2m" ? "vocab-word" : "vocab-meaning";
+
+    root.innerHTML = `
+      ${header()}
+      ${tabs("vocab")}
+      <main>
+        ${progressLabel()}
+        <div class="card">
+          <div class="quiz-prompt-label">${promptLabel}</div>
+          <div class="${promptClass}" style="margin-top:8px;">${promptText}</div>
+        </div>
+        <div class="choices" id="choices">
+          ${q.choices.map((c,i) => `
+            <button class="choice-btn" data-i="${i}">
+              <span class="letter">${String.fromCharCode(65+i)}</span>${c}
+            </button>
+          `).join("")}
+        </div>
+        <div id="explWrap"></div>
+      </main>
+    `;
+    bindTabs();
+    document.querySelectorAll("#choices .choice-btn").forEach(btn => {
+      btn.onclick = () => handleVocabAnswer(parseInt(btn.dataset.i), item, q);
+    });
+  }
+
+  function handleVocabAnswer(i, item, q) {
+    if (answered) return;
+    answered = true;
+    sessionTotal++; state.totalAnswered++;
+    const correct = i === q.answerIndex;
+    if (correct) { sessionCorrect++; state.totalCorrect++; }
+    state.knownWords[item.word] = correct;
+    if (!correct) addToReview("vocab", item.word);
+    else removeFromReview("vocab", item.word);
+    bumpStreak(); saveState();
+
+    document.querySelectorAll("#choices .choice-btn").forEach((btn, idx) => {
+      btn.classList.add("disabled");
+      if (idx === q.answerIndex) btn.classList.add("correct");
+      else if (idx === i) btn.classList.add("wrong");
+    });
+
+    document.getElementById("explWrap").innerHTML = `
+      <div class="explanation"><b>${item.word}</b>：${item.meaning}<br><span style="font-style:italic;color:var(--text-faint);">${item.example}</span></div>
+      <button class="next-btn" id="nextBtn">${qIndex+1 < queue.length ? "次の問題へ" : "結果を見る"}</button>
+    `;
+    document.getElementById("nextBtn").onclick = () => { qIndex++; render(); };
+  }
+
+  // ---------- GRAMMAR ----------
+  function renderGrammar() {
+    if (qIndex >= queue.length) { mode = "result"; return render(); }
+    const item = queue[qIndex];
+    answered = false;
+    root.innerHTML = `
+      ${header()}
+      ${tabs("grammar")}
+      <main>
+        ${progressLabel()}
+        <div class="card">
+          <div class="grammar-sentence">${item.sentence.replace("___", '<span class="blank">&nbsp;</span>')}</div>
+        </div>
+        <div class="choices" id="choices">
+          ${item.choices.map((c,i) => `
+            <button class="choice-btn" data-i="${i}">
+              <span class="letter">${String.fromCharCode(65+i)}</span>${c}
+            </button>
+          `).join("")}
+        </div>
+        <div id="explWrap"></div>
+      </main>
+    `;
+    bindTabs();
+    document.querySelectorAll("#choices .choice-btn").forEach(btn => {
+      btn.onclick = () => handleGrammarAnswer(parseInt(btn.dataset.i), item);
+    });
+  }
+
+  function handleGrammarAnswer(i, item) {
+    if (answered) return;
+    answered = true;
+    sessionTotal++; state.totalAnswered++;
+    const correct = i === item.answer;
+    if (correct) { sessionCorrect++; state.totalCorrect++; removeFromReview("grammar", item.sentence); }
+    else { addToReview("grammar", item.sentence); }
+    bumpStreak(); saveState();
+
+    document.querySelectorAll("#choices .choice-btn").forEach((btn, idx) => {
+      btn.classList.add("disabled");
+      if (idx === item.answer) btn.classList.add("correct");
+      else if (idx === i) btn.classList.add("wrong");
+    });
+
+    document.getElementById("explWrap").innerHTML = `
+      <div class="explanation"><b>${correct ? "正解です！" : "不正解"}</b><br>${item.explanation}</div>
+      <button class="next-btn" id="nextBtn">${qIndex+1 < queue.length ? "次の問題へ" : "結果を見る"}</button>
+    `;
+    document.getElementById("nextBtn").onclick = () => { qIndex++; render(); };
+  }
+
+  // ---------- LISTENING ----------
+  function renderListening() {
+    if (qIndex >= queue.length) { mode = "result"; return render(); }
+    const item = queue[qIndex];
+    answered = false;
+    root.innerHTML = `
+      ${header()}
+      ${tabs("listening")}
+      <main>
+        ${progressLabel()}
+        <div class="card">
+          <div class="listening-play">
+            <button class="play-btn" id="playBtn">▶</button>
+            <div class="play-hint">タップして音声を再生（何度でも聞けます）</div>
+          </div>
+          <div class="listening-question">${item.question}</div>
+        </div>
+        <div class="choices" id="choices">
+          ${item.choices.map((c,i) => `
+            <button class="choice-btn" data-i="${i}">
+              <span class="letter">${String.fromCharCode(65+i)}</span>${c}
+            </button>
+          `).join("")}
+        </div>
+        <div id="explWrap"></div>
+      </main>
+    `;
+    bindTabs();
+    document.getElementById("playBtn").onclick = () => speak(item.audio);
+    // auto play once on load
+    setTimeout(() => speak(item.audio), 300);
+
+    document.querySelectorAll("#choices .choice-btn").forEach(btn => {
+      btn.onclick = () => handleListeningAnswer(parseInt(btn.dataset.i), item);
+    });
+  }
+
+  function handleListeningAnswer(i, item) {
+    if (answered) return;
+    answered = true;
+    sessionTotal++; state.totalAnswered++;
+    const correct = i === item.answer;
+    if (correct) { sessionCorrect++; state.totalCorrect++; removeFromReview("listening", item.audio); }
+    else { addToReview("listening", item.audio); }
+    bumpStreak(); saveState();
+
+    document.querySelectorAll("#choices .choice-btn").forEach((btn, idx) => {
+      btn.classList.add("disabled");
+      if (idx === item.answer) btn.classList.add("correct");
+      else if (idx === i) btn.classList.add("wrong");
+    });
+
+    document.getElementById("explWrap").innerHTML = `
+      <div class="explanation"><b>スクリプト：</b>${item.audio}</div>
+      <button class="next-btn" id="nextBtn">${qIndex+1 < queue.length ? "次の問題へ" : "結果を見る"}</button>
+    `;
+    document.getElementById("nextBtn").onclick = () => { qIndex++; render(); };
+  }
+
+  // ---------- REVIEW MODE (mixed vocab/grammar/listening) ----------
+  function renderReview() {
+    if (qIndex >= reviewQueue.length) { mode = "result"; return render(); }
+    const entry = reviewQueue[qIndex];
+    answered = false;
+
+    if (entry.type === "vocab") {
+      const item = entry.data;
+      const q = buildVocabQuestion(item);
+      currentVocabQ = q;
+      const promptText = q.direction === "w2m" ? item.word : item.meaning;
+      const promptLabel = q.direction === "w2m" ? "この単語の意味は？" : "この意味を表す単語は？";
+      const promptClass = q.direction === "w2m" ? "vocab-word" : "vocab-meaning";
+      root.innerHTML = `
+        ${header()}
+        <main>
+          ${reviewProgressLabel()}
+          <div class="card">
+            <div class="quiz-prompt-label">${promptLabel}</div>
+            <div class="${promptClass}" style="margin-top:8px;">${promptText}</div>
+          </div>
+          <div class="choices" id="choices">
+            ${q.choices.map((c,i) => `
+              <button class="choice-btn" data-i="${i}">
+                <span class="letter">${String.fromCharCode(65+i)}</span>${c}
+              </button>
+            `).join("")}
+          </div>
+          <div id="explWrap"></div>
+        </main>
+      `;
+      document.querySelectorAll("#choices .choice-btn").forEach(btn => {
+        btn.onclick = () => {
+          if (answered) return;
+          answered = true;
+          const i = parseInt(btn.dataset.i);
+          sessionTotal++; state.totalAnswered++;
+          const correct = i === q.answerIndex;
+          if (correct) { sessionCorrect++; state.totalCorrect++; removeFromReview("vocab", item.word); }
+          state.knownWords[item.word] = correct;
+          bumpStreak(); saveState();
+          document.querySelectorAll("#choices .choice-btn").forEach((b, idx) => {
+            b.classList.add("disabled");
+            if (idx === q.answerIndex) b.classList.add("correct");
+            else if (idx === i) b.classList.add("wrong");
+          });
+          document.getElementById("explWrap").innerHTML = `
+            <div class="explanation"><b>${item.word}</b>：${item.meaning}<br><span style="font-style:italic;color:var(--text-faint);">${item.example}</span></div>
+            <button class="next-btn" id="nextBtn">${qIndex+1 < reviewQueue.length ? "次の問題へ" : "結果を見る"}</button>
+          `;
+          document.getElementById("nextBtn").onclick = () => { qIndex++; render(); };
+        };
+      });
+      return;
+    }
+
+    if (entry.type === "grammar") {
+      const item = entry.data;
+      root.innerHTML = `
+        ${header()}
+        <main>
+          ${reviewProgressLabel()}
+          <div class="card">
+            <div class="grammar-sentence">${item.sentence.replace("___", '<span class="blank">&nbsp;</span>')}</div>
+          </div>
+          <div class="choices" id="choices">
+            ${item.choices.map((c,i) => `
+              <button class="choice-btn" data-i="${i}">
+                <span class="letter">${String.fromCharCode(65+i)}</span>${c}
+              </button>
+            `).join("")}
+          </div>
+          <div id="explWrap"></div>
+        </main>
+      `;
+      document.querySelectorAll("#choices .choice-btn").forEach(btn => {
+        btn.onclick = () => {
+          if (answered) return;
+          answered = true;
+          const i = parseInt(btn.dataset.i);
+          sessionTotal++; state.totalAnswered++;
+          const correct = i === item.answer;
+          if (correct) { sessionCorrect++; state.totalCorrect++; removeFromReview("grammar", item.sentence); }
+          bumpStreak(); saveState();
+          document.querySelectorAll("#choices .choice-btn").forEach((b, idx) => {
+            b.classList.add("disabled");
+            if (idx === item.answer) b.classList.add("correct");
+            else if (idx === i) b.classList.add("wrong");
+          });
+          document.getElementById("explWrap").innerHTML = `
+            <div class="explanation"><b>${correct ? "正解です！" : "不正解"}</b><br>${item.explanation}</div>
+            <button class="next-btn" id="nextBtn">${qIndex+1 < reviewQueue.length ? "次の問題へ" : "結果を見る"}</button>
+          `;
+          document.getElementById("nextBtn").onclick = () => { qIndex++; render(); };
+        };
+      });
+      return;
+    }
+
+    if (entry.type === "listening") {
+      const item = entry.data;
+      root.innerHTML = `
+        ${header()}
+        <main>
+          ${reviewProgressLabel()}
+          <div class="card">
+            <div class="listening-play">
+              <button class="play-btn" id="playBtn">▶</button>
+              <div class="play-hint">タップして音声を再生（何度でも聞けます）</div>
+            </div>
+            <div class="listening-question">${item.question}</div>
+          </div>
+          <div class="choices" id="choices">
+            ${item.choices.map((c,i) => `
+              <button class="choice-btn" data-i="${i}">
+                <span class="letter">${String.fromCharCode(65+i)}</span>${c}
+              </button>
+            `).join("")}
+          </div>
+          <div id="explWrap"></div>
+        </main>
+      `;
+      document.getElementById("playBtn").onclick = () => speak(item.audio);
+      setTimeout(() => speak(item.audio), 300);
+      document.querySelectorAll("#choices .choice-btn").forEach(btn => {
+        btn.onclick = () => {
+          if (answered) return;
+          answered = true;
+          const i = parseInt(btn.dataset.i);
+          sessionTotal++; state.totalAnswered++;
+          const correct = i === item.answer;
+          if (correct) { sessionCorrect++; state.totalCorrect++; removeFromReview("listening", item.audio); }
+          bumpStreak(); saveState();
+          document.querySelectorAll("#choices .choice-btn").forEach((b, idx) => {
+            b.classList.add("disabled");
+            if (idx === item.answer) b.classList.add("correct");
+            else if (idx === i) b.classList.add("wrong");
+          });
+          document.getElementById("explWrap").innerHTML = `
+            <div class="explanation"><b>スクリプト：</b>${item.audio}</div>
+            <button class="next-btn" id="nextBtn">${qIndex+1 < reviewQueue.length ? "次の問題へ" : "結果を見る"}</button>
+          `;
+          document.getElementById("nextBtn").onclick = () => { qIndex++; render(); };
+        };
+      });
+      return;
+    }
+  }
+
+  function reviewProgressLabel() {
+    return `<div class="quiz-meta"><span>復習 ${qIndex+1} / ${reviewQueue.length}</span><span class="tag">正解 ${sessionCorrect}/${sessionTotal}</span></div>`;
+  }
+
+  // ---------- RESULT ----------
+  function renderResult() {
+    const pct = sessionTotal > 0 ? Math.round((sessionCorrect/sessionTotal)*100) : 0;
+    state.sessionsDone = (state.sessionsDone || 0) + 1;
+    saveState();
+    let msg = "今日もお疲れさまでした。";
+    if (pct >= 80) msg = "素晴らしい結果です！この調子で続けましょう。";
+    else if (pct >= 50) msg = "良いペースです。明日も続けましょう。";
+    else msg = "継続が力になります。もう一度復習してみましょう。";
+
+    root.innerHTML = `
+      ${header()}
+      <main>
+        <div class="result-screen">
+          <div class="stamp">
+            <div class="pct">${pct}%</div>
+            <div class="lbl">CLEAR</div>
+          </div>
+          <h2>${sessionCorrect} / ${sessionTotal} 問正解</h2>
+          <p>${msg}</p>
+          <button class="btn-primary" id="backHome">ホームに戻る</button>
+        </div>
+      </main>
+    `;
+    document.getElementById("backHome").onclick = () => { mode = "home"; render(); };
+  }
+
+  render();
+})();
+</script>
+</body>
+</html>
