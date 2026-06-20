@@ -412,6 +412,48 @@
   .vocab-actions .know { color: var(--correct); border-color: var(--correct); background: var(--correct-bg); }
   .vocab-actions .dontknow { color: var(--wrong); border-color: var(--wrong); background: var(--wrong-bg); }
 
+  .quiz-prompt-label {
+    text-align: center;
+    font-size: 12px;
+    color: var(--text-faint);
+    font-weight: 700;
+    letter-spacing: 0.3px;
+  }
+
+  .review-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    background: var(--paper-dim);
+    border: 1.5px dashed var(--gold);
+    border-radius: 14px;
+    padding: 14px 16px;
+    margin-bottom: 14px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .review-card-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .review-icon { font-size: 24px; }
+  .review-title { font-size: 14px; font-weight: 700; color: var(--ink); text-align: left; }
+  .review-sub { font-size: 11px; color: var(--text-faint); text-align: left; margin-top: 2px; }
+  .review-count {
+    background: var(--gold);
+    color: white;
+    font-size: 13px;
+    font-weight: 800;
+    min-width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
   /* ---------- RESULT STAMP ---------- */
   .result-screen {
     text-align: center;
@@ -657,21 +699,47 @@ const LISTENING_DATA = [
   function loadState() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) return JSON.parse(raw);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (!parsed.reviewList) parsed.reviewList = { vocab: [], grammar: [], listening: [] };
+        return parsed;
+      }
     } catch(e) {}
-    return { totalAnswered: 0, totalCorrect: 0, knownWords: {}, streak: 0, lastStudyDate: null, sessionsDone: 0 };
+    return { totalAnswered: 0, totalCorrect: 0, knownWords: {}, streak: 0, lastStudyDate: null, sessionsDone: 0,
+      reviewList: { vocab: [], grammar: [], listening: [] } };
   }
   function saveState() {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(e) {}
   }
   let state = loadState();
 
-  let mode = "home"; // home | vocab | grammar | listening | result
+  // ---------- REVIEW LIST HELPERS ----------
+  // vocab: store word string. grammar/listening: store the sentence/audio text as a unique key.
+  function addToReview(category, key) {
+    const list = state.reviewList[category];
+    if (!list.includes(key)) list.push(key);
+  }
+  function removeFromReview(category, key) {
+    state.reviewList[category] = state.reviewList[category].filter(k => k !== key);
+  }
+  function reviewCount() {
+    return state.reviewList.vocab.length + state.reviewList.grammar.length + state.reviewList.listening.length;
+  }
+  function getReviewItems() {
+    const vocabItems = VOCAB_DATA.filter(v => state.reviewList.vocab.includes(v.word));
+    const grammarItems = GRAMMAR_DATA.filter(g => state.reviewList.grammar.includes(g.sentence));
+    const listeningItems = LISTENING_DATA.filter(l => state.reviewList.listening.includes(l.audio));
+    return { vocabItems, grammarItems, listeningItems };
+  }
+
+  let mode = "home"; // home | vocab | grammar | listening | review | result
   let queue = [];
   let qIndex = 0;
   let sessionCorrect = 0;
   let sessionTotal = 0;
   let answered = false;
+  let currentVocabQ = null;
+  let reviewQueue = []; // mixed: [{type:'vocab'|'grammar'|'listening', data:...}]
 
   function shuffle(arr) {
     const a = arr.slice();
@@ -724,6 +792,7 @@ const LISTENING_DATA = [
     if (mode === "vocab") return renderVocab();
     if (mode === "grammar") return renderGrammar();
     if (mode === "listening") return renderListening();
+    if (mode === "review") return renderReview();
     if (mode === "result") return renderResult();
   }
 
@@ -753,6 +822,7 @@ const LISTENING_DATA = [
     const totalQ = state.totalAnswered;
     const acc = totalQ > 0 ? Math.round((state.totalCorrect/totalQ)*100) : 0;
     const knownCount = Object.values(state.knownWords).filter(v => v).length;
+    const reviewN = reviewCount();
 
     root.innerHTML = `
       ${header()}
@@ -768,11 +838,24 @@ const LISTENING_DATA = [
           <button class="btn-primary" id="quickStart">今日の学習をはじめる</button>
         </div>
 
+        ${reviewN > 0 ? `
+        <button class="review-card" id="reviewBtn">
+          <div class="review-card-left">
+            <span class="review-icon">🔁</span>
+            <div>
+              <div class="review-title">間違えた問題を復習</div>
+              <div class="review-sub">苦手をまとめて解き直す</div>
+            </div>
+          </div>
+          <span class="review-count">${reviewN}</span>
+        </button>
+        ` : ""}
+
         <div class="menu-grid">
           <button class="menu-item" data-mode="vocab">
             <span class="icon">📇</span>
-            <span class="name">単語カード</span>
-            <span class="sub">頻出語彙を暗記</span>
+            <span class="name">単語クイズ</span>
+            <span class="sub">4択で語彙を暗記</span>
           </button>
           <button class="menu-item" data-mode="grammar">
             <span class="icon">✏️</span>
@@ -792,6 +875,24 @@ const LISTENING_DATA = [
     document.querySelectorAll(".menu-item").forEach(el => {
       el.onclick = () => startSession(el.dataset.mode);
     });
+    const reviewBtn = document.getElementById("reviewBtn");
+    if (reviewBtn) reviewBtn.onclick = () => startReviewSession();
+  }
+
+  function startReviewSession() {
+    const { vocabItems, grammarItems, listeningItems } = getReviewItems();
+    reviewQueue = shuffle([
+      ...vocabItems.map(d => ({ type: "vocab", data: d })),
+      ...grammarItems.map(d => ({ type: "grammar", data: d })),
+      ...listeningItems.map(d => ({ type: "listening", data: d }))
+    ]);
+    if (reviewQueue.length === 0) { mode = "home"; return render(); }
+    mode = "review";
+    qIndex = 0;
+    sessionCorrect = 0;
+    sessionTotal = 0;
+    answered = false;
+    render();
   }
 
   function startSession(m) {
@@ -800,7 +901,13 @@ const LISTENING_DATA = [
     sessionCorrect = 0;
     sessionTotal = 0;
     answered = false;
-    if (m === "vocab") queue = shuffle(VOCAB_DATA).slice(0, 10);
+    if (m === "vocab") {
+      // prioritize words marked as "not known yet" (knownWords[word] === false)
+      const weak = VOCAB_DATA.filter(v => state.knownWords[v.word] === false);
+      const rest = VOCAB_DATA.filter(v => state.knownWords[v.word] !== false);
+      const ordered = [...shuffle(weak), ...shuffle(rest)];
+      queue = ordered.slice(0, 10);
+    }
     if (m === "grammar") queue = shuffle(GRAMMAR_DATA).slice(0, 8);
     if (m === "listening") queue = shuffle(LISTENING_DATA).slice(0, 8);
     render();
@@ -823,39 +930,76 @@ const LISTENING_DATA = [
     return `<div class="quiz-meta"><span>問題 ${qIndex+1} / ${queue.length}</span><span class="tag">正解 ${sessionCorrect}/${sessionTotal}</span></div>`;
   }
 
-  // ---------- VOCAB ----------
+  // ---------- VOCAB (4-choice quiz) ----------
+  function buildVocabQuestion(item) {
+    // randomly choose direction: word -> meaning, or meaning -> word
+    const direction = Math.random() < 0.5 ? "w2m" : "m2w";
+    const correctText = direction === "w2m" ? item.meaning : item.word;
+    const pool = VOCAB_DATA.filter(v => v.word !== item.word);
+    const distractors = shuffle(pool).slice(0, 3).map(v => direction === "w2m" ? v.meaning : v.word);
+    const choices = shuffle([correctText, ...distractors]);
+    const answerIndex = choices.indexOf(correctText);
+    return { item, direction, choices, answerIndex };
+  }
+
   function renderVocab() {
     if (qIndex >= queue.length) { mode = "result"; return render(); }
     const item = queue[qIndex];
+    answered = false;
+    const q = buildVocabQuestion(item);
+    currentVocabQ = q;
+
+    const promptText = q.direction === "w2m" ? item.word : item.meaning;
+    const promptLabel = q.direction === "w2m" ? "この単語の意味は？" : "この意味を表す単語は？";
+    const promptClass = q.direction === "w2m" ? "vocab-word" : "vocab-meaning";
+
     root.innerHTML = `
       ${header()}
       ${tabs("vocab")}
       <main>
         ${progressLabel()}
         <div class="card">
-          <div class="vocab-word">${item.word}</div>
-          <div class="vocab-meaning">${item.meaning}</div>
-          <div class="vocab-example">${item.example}</div>
+          <div class="quiz-prompt-label">${promptLabel}</div>
+          <div class="${promptClass}" style="margin-top:8px;">${promptText}</div>
         </div>
-        <div class="vocab-actions">
-          <button class="dontknow" id="vNo">まだ覚えていない</button>
-          <button class="know" id="vYes">覚えた ✓</button>
+        <div class="choices" id="choices">
+          ${q.choices.map((c,i) => `
+            <button class="choice-btn" data-i="${i}">
+              <span class="letter">${String.fromCharCode(65+i)}</span>${c}
+            </button>
+          `).join("")}
         </div>
+        <div id="explWrap"></div>
       </main>
     `;
     bindTabs();
-    document.getElementById("vYes").onclick = () => {
-      state.knownWords[item.word] = true;
-      state.totalAnswered++; state.totalCorrect++; sessionCorrect++; sessionTotal++;
-      bumpStreak(); saveState();
-      qIndex++; render();
-    };
-    document.getElementById("vNo").onclick = () => {
-      state.knownWords[item.word] = false;
-      state.totalAnswered++; sessionTotal++;
-      bumpStreak(); saveState();
-      qIndex++; render();
-    };
+    document.querySelectorAll("#choices .choice-btn").forEach(btn => {
+      btn.onclick = () => handleVocabAnswer(parseInt(btn.dataset.i), item, q);
+    });
+  }
+
+  function handleVocabAnswer(i, item, q) {
+    if (answered) return;
+    answered = true;
+    sessionTotal++; state.totalAnswered++;
+    const correct = i === q.answerIndex;
+    if (correct) { sessionCorrect++; state.totalCorrect++; }
+    state.knownWords[item.word] = correct;
+    if (!correct) addToReview("vocab", item.word);
+    else removeFromReview("vocab", item.word);
+    bumpStreak(); saveState();
+
+    document.querySelectorAll("#choices .choice-btn").forEach((btn, idx) => {
+      btn.classList.add("disabled");
+      if (idx === q.answerIndex) btn.classList.add("correct");
+      else if (idx === i) btn.classList.add("wrong");
+    });
+
+    document.getElementById("explWrap").innerHTML = `
+      <div class="explanation"><b>${item.word}</b>：${item.meaning}<br><span style="font-style:italic;color:var(--text-faint);">${item.example}</span></div>
+      <button class="next-btn" id="nextBtn">${qIndex+1 < queue.length ? "次の問題へ" : "結果を見る"}</button>
+    `;
+    document.getElementById("nextBtn").onclick = () => { qIndex++; render(); };
   }
 
   // ---------- GRAMMAR ----------
@@ -892,7 +1036,8 @@ const LISTENING_DATA = [
     answered = true;
     sessionTotal++; state.totalAnswered++;
     const correct = i === item.answer;
-    if (correct) { sessionCorrect++; state.totalCorrect++; }
+    if (correct) { sessionCorrect++; state.totalCorrect++; removeFromReview("grammar", item.sentence); }
+    else { addToReview("grammar", item.sentence); }
     bumpStreak(); saveState();
 
     document.querySelectorAll("#choices .choice-btn").forEach((btn, idx) => {
@@ -950,7 +1095,8 @@ const LISTENING_DATA = [
     answered = true;
     sessionTotal++; state.totalAnswered++;
     const correct = i === item.answer;
-    if (correct) { sessionCorrect++; state.totalCorrect++; }
+    if (correct) { sessionCorrect++; state.totalCorrect++; removeFromReview("listening", item.audio); }
+    else { addToReview("listening", item.audio); }
     bumpStreak(); saveState();
 
     document.querySelectorAll("#choices .choice-btn").forEach((btn, idx) => {
@@ -964,6 +1110,159 @@ const LISTENING_DATA = [
       <button class="next-btn" id="nextBtn">${qIndex+1 < queue.length ? "次の問題へ" : "結果を見る"}</button>
     `;
     document.getElementById("nextBtn").onclick = () => { qIndex++; render(); };
+  }
+
+  // ---------- REVIEW MODE (mixed vocab/grammar/listening) ----------
+  function renderReview() {
+    if (qIndex >= reviewQueue.length) { mode = "result"; return render(); }
+    const entry = reviewQueue[qIndex];
+    answered = false;
+
+    if (entry.type === "vocab") {
+      const item = entry.data;
+      const q = buildVocabQuestion(item);
+      currentVocabQ = q;
+      const promptText = q.direction === "w2m" ? item.word : item.meaning;
+      const promptLabel = q.direction === "w2m" ? "この単語の意味は？" : "この意味を表す単語は？";
+      const promptClass = q.direction === "w2m" ? "vocab-word" : "vocab-meaning";
+      root.innerHTML = `
+        ${header()}
+        <main>
+          ${reviewProgressLabel()}
+          <div class="card">
+            <div class="quiz-prompt-label">${promptLabel}</div>
+            <div class="${promptClass}" style="margin-top:8px;">${promptText}</div>
+          </div>
+          <div class="choices" id="choices">
+            ${q.choices.map((c,i) => `
+              <button class="choice-btn" data-i="${i}">
+                <span class="letter">${String.fromCharCode(65+i)}</span>${c}
+              </button>
+            `).join("")}
+          </div>
+          <div id="explWrap"></div>
+        </main>
+      `;
+      document.querySelectorAll("#choices .choice-btn").forEach(btn => {
+        btn.onclick = () => {
+          if (answered) return;
+          answered = true;
+          const i = parseInt(btn.dataset.i);
+          sessionTotal++; state.totalAnswered++;
+          const correct = i === q.answerIndex;
+          if (correct) { sessionCorrect++; state.totalCorrect++; removeFromReview("vocab", item.word); }
+          state.knownWords[item.word] = correct;
+          bumpStreak(); saveState();
+          document.querySelectorAll("#choices .choice-btn").forEach((b, idx) => {
+            b.classList.add("disabled");
+            if (idx === q.answerIndex) b.classList.add("correct");
+            else if (idx === i) b.classList.add("wrong");
+          });
+          document.getElementById("explWrap").innerHTML = `
+            <div class="explanation"><b>${item.word}</b>：${item.meaning}<br><span style="font-style:italic;color:var(--text-faint);">${item.example}</span></div>
+            <button class="next-btn" id="nextBtn">${qIndex+1 < reviewQueue.length ? "次の問題へ" : "結果を見る"}</button>
+          `;
+          document.getElementById("nextBtn").onclick = () => { qIndex++; render(); };
+        };
+      });
+      return;
+    }
+
+    if (entry.type === "grammar") {
+      const item = entry.data;
+      root.innerHTML = `
+        ${header()}
+        <main>
+          ${reviewProgressLabel()}
+          <div class="card">
+            <div class="grammar-sentence">${item.sentence.replace("___", '<span class="blank">&nbsp;</span>')}</div>
+          </div>
+          <div class="choices" id="choices">
+            ${item.choices.map((c,i) => `
+              <button class="choice-btn" data-i="${i}">
+                <span class="letter">${String.fromCharCode(65+i)}</span>${c}
+              </button>
+            `).join("")}
+          </div>
+          <div id="explWrap"></div>
+        </main>
+      `;
+      document.querySelectorAll("#choices .choice-btn").forEach(btn => {
+        btn.onclick = () => {
+          if (answered) return;
+          answered = true;
+          const i = parseInt(btn.dataset.i);
+          sessionTotal++; state.totalAnswered++;
+          const correct = i === item.answer;
+          if (correct) { sessionCorrect++; state.totalCorrect++; removeFromReview("grammar", item.sentence); }
+          bumpStreak(); saveState();
+          document.querySelectorAll("#choices .choice-btn").forEach((b, idx) => {
+            b.classList.add("disabled");
+            if (idx === item.answer) b.classList.add("correct");
+            else if (idx === i) b.classList.add("wrong");
+          });
+          document.getElementById("explWrap").innerHTML = `
+            <div class="explanation"><b>${correct ? "正解です！" : "不正解"}</b><br>${item.explanation}</div>
+            <button class="next-btn" id="nextBtn">${qIndex+1 < reviewQueue.length ? "次の問題へ" : "結果を見る"}</button>
+          `;
+          document.getElementById("nextBtn").onclick = () => { qIndex++; render(); };
+        };
+      });
+      return;
+    }
+
+    if (entry.type === "listening") {
+      const item = entry.data;
+      root.innerHTML = `
+        ${header()}
+        <main>
+          ${reviewProgressLabel()}
+          <div class="card">
+            <div class="listening-play">
+              <button class="play-btn" id="playBtn">▶</button>
+              <div class="play-hint">タップして音声を再生（何度でも聞けます）</div>
+            </div>
+            <div class="listening-question">${item.question}</div>
+          </div>
+          <div class="choices" id="choices">
+            ${item.choices.map((c,i) => `
+              <button class="choice-btn" data-i="${i}">
+                <span class="letter">${String.fromCharCode(65+i)}</span>${c}
+              </button>
+            `).join("")}
+          </div>
+          <div id="explWrap"></div>
+        </main>
+      `;
+      document.getElementById("playBtn").onclick = () => speak(item.audio);
+      setTimeout(() => speak(item.audio), 300);
+      document.querySelectorAll("#choices .choice-btn").forEach(btn => {
+        btn.onclick = () => {
+          if (answered) return;
+          answered = true;
+          const i = parseInt(btn.dataset.i);
+          sessionTotal++; state.totalAnswered++;
+          const correct = i === item.answer;
+          if (correct) { sessionCorrect++; state.totalCorrect++; removeFromReview("listening", item.audio); }
+          bumpStreak(); saveState();
+          document.querySelectorAll("#choices .choice-btn").forEach((b, idx) => {
+            b.classList.add("disabled");
+            if (idx === item.answer) b.classList.add("correct");
+            else if (idx === i) b.classList.add("wrong");
+          });
+          document.getElementById("explWrap").innerHTML = `
+            <div class="explanation"><b>スクリプト：</b>${item.audio}</div>
+            <button class="next-btn" id="nextBtn">${qIndex+1 < reviewQueue.length ? "次の問題へ" : "結果を見る"}</button>
+          `;
+          document.getElementById("nextBtn").onclick = () => { qIndex++; render(); };
+        };
+      });
+      return;
+    }
+  }
+
+  function reviewProgressLabel() {
+    return `<div class="quiz-meta"><span>復習 ${qIndex+1} / ${reviewQueue.length}</span><span class="tag">正解 ${sessionCorrect}/${sessionTotal}</span></div>`;
   }
 
   // ---------- RESULT ----------
